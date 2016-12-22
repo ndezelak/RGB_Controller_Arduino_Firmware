@@ -4,7 +4,7 @@ void ESP_AP(){
  
 //  Timer1.restart();
 //  Timer1.attachInterrupt(timer_AP,dva); BOŠ UPORABIL V KONČNI VERZIJI!
-delay(DELAY); 
+delay_custom(DELAY); 
 //Serial.println("Končal sem s timerjem");
 }
 
@@ -13,7 +13,7 @@ void ESP_reset(){
    //Serial.println("Resetiram modul ...");
 //   Timer1.restart();
 //   Timer1.attachInterrupt(timer_RST,stiri);  
-delay(100);
+delay_custom(100000);
 /*Serial.end();
 delay(500);
 Serial.begin(115200);
@@ -33,20 +33,20 @@ void ESP_SSID(){
   
 //  Timer1.restart();
 //  Timer1.attachInterrupt(timer_SSID,dva);
-delay(DELAY);
+delay_custom(DELAY);
 //Serial.println("Končal sem s timerjem");
 }
 
 void ESP_MUX(){
  
 Serial.print("AT+CIPMUX=1\r\n");
-delay(DELAY);
+delay_custom(DELAY);;
 }
 
 void ESP_WEB(){
 Serial.print("AT+CIPSERVER=1,80\r\n");
 
-delay(DELAY);
+delay_custom(DELAY);
 }
 
 
@@ -105,7 +105,7 @@ Serial.flush();
 
 void ESP_STATUS(){
 Serial.print("AT+CIPSTATUS\r\n");
-delay(DELAY);
+delay_custom(DELAY);
 }
 
 
@@ -130,5 +130,5 @@ void ESP_CLOSE(){
   String konec="\r\n";
   ukaz+=channel+konec;
   Serial.print(ukaz);
-  delay(DELAY);
+delay_custom(DELAY);
 }

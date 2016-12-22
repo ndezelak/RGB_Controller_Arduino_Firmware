@@ -77,4 +77,22 @@ boolean equal_array(char char1[],char char2[], int dolzina){
  
  return true;
 }
+
+
+// ************ DELAY FUNCTION WITHOUT USING A TIMER ****************** //
+void delay_custom(long micros){
+    // Corresponds to a frequency of 16MHz
+    const int freq = 16;
+    unsigned long steps =(micros);
+    unsigned long i;
+    for (i = 0; i<steps; i++){
+       asm("NOP");
+    }
+}
+
+
+
+
+
+
 //***********************************************************************************

@@ -43,7 +43,7 @@ Verzija 1.2.1, 22.12.2016
 #define ena     1000000
 #define dva     2000000
 #define stiri   4000000
-#define DELAY   5 //Delay in ms for all the functions.
+#define DELAY   5000 //Delay in ms for all the functions.
 //SoftwareSerial ESP(2, 4); // RX, TX
 
 
@@ -107,12 +107,21 @@ void setup() {
         pinMode(11,OUTPUT);
         pinMode(5,OUTPUT);
         
-        //Timer1.initialize(stiri);
+// Initialize timers
+        TCCR0A = (1<<COM0A1) | (1<<WGM00);//*| (1<<WGM01)*/ | 
+        TCCR0B = (1<<CS00);
+        TCCR1A = (1<<COM1B1) | (1<<WGM10);
+        TCCR1B = (1<<CS10);// | (1<<WGM12);
+        TCCR2A = (1<<COM2B1) | (1<<WGM20); //*| (1<<WGM21) */
+        TCCR2B = (1<<CS20);
+
+
 // Initialize UART
         Serial.begin(115200);
-        
-        delay(100); //Počakaj, da se vzpostavi tudi ESP 
-       
+    
+        delay_custom(1000000); //Počakaj, da se vzpostavi tudi ESP 
+        // Set Server Timeout time to minimum (as connections are actually omnidirectional)
+        Serial.print("AT+CIPSTO=1\r\n");
          /*TCCR2A = _BV(COM2A0) | _BV(COM2B1) | _BV(WGM21) | _BV(WGM20);
          TCCR2B = _BV(WGM22) | _BV(CS22);
          OCR2A = 180;
@@ -124,6 +133,7 @@ void setup() {
 //***********************************************************************************************************************************************************************************
 
 void loop() { // run over and over
+
 
       //******** RESET MODULA *********
                  if(RST_flag){ //Ko si na vrsti za reset
@@ -303,12 +313,10 @@ void loop() { // run over and over
             
             
             }
-        //***************************************************
+       
 
 
 
-        //************READ CHANNEL*********************************
-        /* V to stanje prideš lahko zgolj iz WAIT funkcije. 
           if(READ_flag){
             
            ESP_READ();            
@@ -317,31 +325,6 @@ void loop() { // run over and over
            input="";
           }
 
-        //**********ANSWER TO THE CHANNEL***************************
-          if(ANSWER_flag){
-
-          ESP_ANSWER();
-          ANSWER_flag=false;
-          CLOSE_flag=true;
-          
-          }
-
-
-
-        */  
-          
-/*
-          //*******CLOSE WEB***************************
-            if(CLOSEWEB_flag &&   (!Serial.available()) ){
-                  ESP_CLOSEWEB();
-                  CLOSEWEB_flag=false;
-                  WEB_flag=true;
-
-
-                  input="";
-            }
-*/
-//***************CLOSE TCP CONNECTION********************************************
           if(CLOSE_flag){
   
               ESP_CLOSE();
@@ -394,7 +377,7 @@ void loop() { // run over and over
 
 
       
-        //************CHECK CIPSTATUS******************************
+
           if(STATUS_flag){
              ESP_STATUS();
              STATUS_flag=false;
@@ -405,7 +388,6 @@ void loop() { // run over and over
 
 
 
-        //********STATUS ANSWER**********************************
           if(        STATUS_answer==true && (!Serial.available() )  && newMsg  ){
             newMsg=false;
             
@@ -442,7 +424,7 @@ void loop() { // run over and over
 
    }
            
-//*********************************************************************************************
+
 
 
 
@@ -462,7 +444,7 @@ void serialEvent(){
   // As long as new data is available in the UART RX BUFFER
   while(Serial.available()){ 
       input+=(char)Serial.read();
-      delay(2);
+      delay_custom(2000);
   }
   // Check if the received message is a HTTP response
    if(search_buffer(http,sizeof(http)) ){ 
@@ -527,15 +509,32 @@ void LED_drive(){
     float zelena=2.55*Z;
     float rdeca=2.55*R;
 */
+    // TODO: Implement PWM functions using C code
+    //analogWrite(3,(int)zelena);//zelena
+    // D3 corresponds to pin 0C2B
+    OCR2B=(int)zelena;
     
-    analogWrite(3,(int)zelena);//zelena
-    analogWrite(6,(int)rdeca); //rdeca
-    analogWrite(10,(int)modra); //modra
+    //analogWrite(6,(int)rdeca); //rdeca
+    // D6 corresponds to pin OC0A
+    OCR0A = (int)rdeca;
+
+    
+    //analogWrite(10,(int)modra); //modra
+    // D10 corresponds to OC1B
+    OCR1BL = int(modra);
+
+    
    }
    else{
-    analogWrite(3,0);
+
+    /*analogWrite(3,0);
     analogWrite(6,0);
     analogWrite(10,0);
+*/
+  OCR2B = 0;
+  OCR0A=0;
+  OCR1BL=0;
+
    }
 }
 
@@ -544,9 +543,9 @@ void error(){
   Serial.println("ERROR! RESET MODUL!");
   while(1){
   digitalWrite(13,HIGH);
-  delay(500);
+  delay_custom(500000);
   digitalWrite(13,LOW);
-  delay(500);
+  delay_custom(500000);
   }
 }
 //**********************************************************************
