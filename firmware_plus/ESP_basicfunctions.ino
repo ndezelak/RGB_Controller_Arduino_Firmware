@@ -89,10 +89,67 @@ void delay_custom(long micros){
        asm("NOP");
     }
 }
-
-
-
-
-
-
 //***********************************************************************************
+void fade_lights(int* current_red, int* current_green, int* current_blue){
+      int inc = 1;   
+// Determine which colors are active **************************
+      // red rising, green falling
+      if (*current_blue == 0){
+       
+        *current_red+=inc;
+        *current_green-=inc;
+
+      // check for limits
+         if (*current_red > 100){
+              *current_red = 100;
+              
+         }
+         if (*current_green <= 0){
+              *current_green = 0;
+              *current_blue = 1;
+         }
+
+       // blue falling, green rising
+      }
+      else if (*current_red == 0){
+      
+
+        *current_green+=inc;
+        *current_blue-=inc;
+           // check for limits
+         if (*current_green > 100){
+              *current_green = 100;
+              
+         }
+        
+         if (*current_blue <= 0){
+              *current_blue = 0;
+              *current_red = 1;
+         }
+        
+        // blue rising, red falling 
+      }
+      else{
+       
+
+        *current_blue+=inc;
+        *current_red-=inc;
+           // check for limits
+         if (*current_blue > 100){
+              *current_blue = 100;
+              
+         }
+       
+         if (*current_red <= 0){
+              *current_red = 0;
+              *current_green = 1;
+         }
+      }
+
+}
+
+float exponent(float input){
+    float out = 1 + input + (input*input)/2 + (input*input*input)/6 + (input*input*input*input)/24;
+    return out;  
+}
+

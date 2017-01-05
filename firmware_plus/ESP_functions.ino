@@ -75,6 +75,7 @@ void ESP_READ(){
           Z=(buf[offset+sizeof(http)+19]-'0')*10+(buf[offset+sizeof(http)+20]-'0');
           R=(buf[offset+sizeof(http)+22]-'0')*10+(buf[offset+sizeof(http)+23]-'0');
           stikalo=(buf[offset+sizeof(http)+26]-'0');
+          program = 0;
           //return true;
            //}
 /*

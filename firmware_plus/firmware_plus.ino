@@ -25,25 +25,21 @@ Verzija 1.2, 28.12.2015
 Verzija 1.2.1, 22.12.2016
       - Higher Baudrate used
       - Some AT commands have been updated to the new version
-
+Version 1.2.2 27.12.2016
+      - Low level control over the PWM outputs
+      - Custom delay function (uses  empty processor cycles instead)
 */
-
-
-
-
-
-
-
 //#include <TimerOne.h>
 //#include <SoftwareSerial.h>
 #include <avr/pgmspace.h>
-
+#include <avr/interrupt.h>
 //spremenljivke za konfiguracijo časovnika in njegove prekinitve
 #define pol     500000
 #define ena     1000000
 #define dva     2000000
 #define stiri   4000000
 #define DELAY   5000 //Delay in ms for all the functions.
+#define INT uint32_t
 //SoftwareSerial ESP(2, 4); // RX, TX
 
 
@@ -65,7 +61,9 @@ char buf[200];
 int stevec=0;
 boolean newHTTP=false;
 boolean newMsg=false;
-boolean attempt=false; //spremenljivka, ki signalizira ali poizkušaš že drugič zapreti isti kanal.
+boolean attempt=false;
+boolean program = true;
+INT interrupt_count = 0;
 
 
 
@@ -89,11 +87,24 @@ boolean WEB_answer=false;
 boolean SSID_answer=false;
 boolean AP_answer=false; //odgovor ESP na konfiguracijo AP
 boolean RST_answer=false;  // odgovor ESP na reset
+
+int lookup_table [256] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,\
+0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02,\
+0x02, 0x02, 0x03, 0x03, 0x03, 0x03, 0x03, 0x03, 0x04, 0x04, 0x04, 0x04, 0x04, 0x05, 0x05, 0x05,\
+0x05, 0x06, 0x06, 0x06, 0x07, 0x07, 0x07, 0x08, 0x08, 0x08, 0x09, 0x09, 0x0A, 0x0A, 0x0B, 0x0B,\
+0x0C, 0x0C, 0x0D, 0x0D, 0x0E, 0x0F, 0x0F, 0x10, 0x11, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,\
+0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1F, 0x20, 0x21, 0x23, 0x24, 0x26, 0x27, 0x29, 0x2B, 0x2C,\
+0x2E, 0x30, 0x32, 0x34, 0x36, 0x38, 0x3A, 0x3C, 0x3E, 0x40, 0x43, 0x45, 0x47, 0x4A, 0x4C, 0x4F,\
+0x51, 0x54, 0x57, 0x59, 0x5C, 0x5F, 0x62, 0x64, 0x67, 0x6A, 0x6D, 0x70, 0x73, 0x76, 0x79, 0x7C,\
+0x7F, 0x82, 0x85, 0x88, 0x8B, 0x8E, 0x91, 0x94, 0x97, 0x9A, 0x9C, 0x9F, 0xA2, 0xA5, 0xA7, 0xAA,\
+0xAD, 0xAF, 0xB2, 0xB4, 0xB7, 0xB9, 0xBB, 0xBE, 0xC0, 0xC2, 0xC4, 0xC6, 0xC8, 0xCA, 0xCC, 0xCE,\
+0xD0, 0xD2, 0xD3, 0xD5, 0xD7, 0xD8, 0xDA, 0xDB, 0xDD, 0xDE, 0xDF, 0xE1, 0xE2, 0xE3, 0xE4, 0xE5,\
+0xE6, 0xE7, 0xE8, 0xE9, 0xEA, 0xEB, 0xEC, 0xED, 0xED, 0xEE, 0xEF, 0xEF, 0xF0, 0xF1, 0xF1, 0xF2,\
+0xF2, 0xF3, 0xF3, 0xF4, 0xF4, 0xF5, 0xF5, 0xF6, 0xF6, 0xF6, 0xF7, 0xF7, 0xF7, 0xF8, 0xF8, 0xF8,\
+0xF9, 0xF9, 0xF9, 0xF9, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFB, 0xFC,\
+0xFC, 0xFC, 0xFC, 0xFC, 0xFC, 0xFC, 0xFC, 0xFC, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD,\
+0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFD, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFE, 0xFF, 0xFF};
 //****************************************************************
-
-
-
-
 void setup() {
  // Initialize string for saving the server response   
         input="";
@@ -115,6 +126,9 @@ void setup() {
         TCCR2A = (1<<COM2B1) | (1<<WGM20); //*| (1<<WGM21) */
         TCCR2B = (1<<CS20);
 
+        // enable timer1 overflow interrupt. Flag is set at BOTTOM in PWM phase correct mode.
+        TIMSK1 = (1 << TOIE1);
+
 
 // Initialize UART
         Serial.begin(115200);
@@ -126,12 +140,14 @@ void setup() {
          TCCR2B = _BV(WGM22) | _BV(CS22);
          OCR2A = 180;
          OCR2B = 50;*/
+// enable interrupts
+        sei();
+// start colors
+      M = 50;
+      R = 50;
 
 }
-
-
 //***********************************************************************************************************************************************************************************
-
 void loop() { // run over and over
 
 
@@ -458,10 +474,8 @@ void serialEvent(){
 
 //**************LED DRIVER FUNCTION*******************************
 void LED_drive(){ 
-   if(stikalo==1){
-
-
-    
+   if(stikalo==1 || program == 1){
+/*
 //Koeficienti parabole, ki izhaja iz linearizacije tokovne karakteristike LED diode.
     //Rdeca barva
     float A_r=111.1;
@@ -495,21 +509,40 @@ void LED_drive(){
      rdeca=(rdeca)*(255.0/12.0);
      modra=(modra)*(255.0/12.0);
      zelena=(zelena)*(255.0/12.0); 
+*/
+// S - curve model for more linear driving of the LEDs
+      float duty_red = (float(R)/100) * 255;
+      float duty_blue = (float(M)/100) * 255;
+      float duty_green = (float(Z)/100) * 255;
+    /* 
+     float rdeca= 255 * (1 / (1 + exponent(-1 * ( (duty_red/21) - 6)    ) ) );
+     float modra= 255 * (1 / (1 + exponent(-1 * ( (duty_blue/21) - 6)    ) ) );
+     float zelena= 255 * (1 / (1 + exponent(-1 * ( (duty_green/21) - 6)    ) ) );
+   */
+     int rdeca = lookup_table[int(duty_red)];
+     int modra = lookup_table[int(duty_blue)];
+     int zelena = lookup_table[int(duty_green)];
 
-     if(M==0)modra=0;
-     if(R==0)rdeca=0;
-     if(Z==0)zelena=0;
+     
+     /*Serial.print("RED:");
+     Serial.println(rdeca);
+     Serial.print("GREEN:");
+     Serial.println(zelena);
+     */
+     if(M<=0)modra=0;
+     if(R<=0)rdeca=0;
+     if(Z<=0)zelena=0;
+     
      if(modra>255)modra=255;
      if(rdeca>255)rdeca=255;
      if(zelena>255)zelena=255;
-     
-    
+   
     /*
     float modra=2.55*M;
     float zelena=2.55*Z;
     float rdeca=2.55*R;
 */
-    // TODO: Implement PWM functions using C code
+
     //analogWrite(3,(int)zelena);//zelena
     // D3 corresponds to pin 0C2B
     OCR2B=(int)zelena;
@@ -549,7 +582,21 @@ void error(){
   }
 }
 //**********************************************************************
-
+// This interrupt is triggered every 512 timer clock_cylcles
+// Currently a clock_cycle is 62,5 ns. 
+ISR(TIMER1_OVF_vect){
+  interrupt_count++;
+ 
+  if (interrupt_count > 2000){
+      digitalWrite(13,HIGH);
+      interrupt_count = 0;
+      if(program){
+        fade_lights(&R,&Z,&M);
+        LED_drive();
+      }
+  }
+  
+}
 
 
 
