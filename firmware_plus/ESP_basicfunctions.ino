@@ -1,8 +1,5 @@
-///////////////////FUNKCIJA ZA BRANJE ODGOVORA/////////////////////////////////////////////////////////
 
-
-
-
+/*
 //****************************************************************************************
 // Funkcija za iskanje željene besede, ki je vhod v funkcijo, znotraj globalnega stringa input
 boolean search_buffer(char beseda[], int dolzina){
@@ -78,7 +75,7 @@ boolean equal_array(char char1[],char char2[], int dolzina){
  return true;
 }
 
-
+*/
 // ************ DELAY FUNCTION WITHOUT USING A TIMER ****************** //
 void delay_custom(long micros){
     // Corresponds to a frequency of 16MHz
@@ -100,8 +97,8 @@ void fade_lights(int* current_red, int* current_green, int* current_blue){
         *current_green-=inc;
 
       // check for limits
-         if (*current_red > 100){
-              *current_red = 100;
+         if (*current_red > MAX_VALUE){
+              *current_red = MAX_VALUE;
               
          }
          if (*current_green <= 0){
@@ -117,8 +114,8 @@ void fade_lights(int* current_red, int* current_green, int* current_blue){
         *current_green+=inc;
         *current_blue-=inc;
            // check for limits
-         if (*current_green > 100){
-              *current_green = 100;
+         if (*current_green > MAX_VALUE){
+              *current_green = MAX_VALUE;
               
          }
         
@@ -135,8 +132,8 @@ void fade_lights(int* current_red, int* current_green, int* current_blue){
         *current_blue+=inc;
         *current_red-=inc;
            // check for limits
-         if (*current_blue > 100){
-              *current_blue = 100;
+         if (*current_blue > MAX_VALUE){
+              *current_blue = MAX_VALUE;
               
          }
        
@@ -147,9 +144,9 @@ void fade_lights(int* current_red, int* current_green, int* current_blue){
       }
 
 }
-
+/*
 float exponent(float input){
     float out = 1 + input + (input*input)/2 + (input*input*input)/6 + (input*input*input*input)/24;
     return out;  
 }
-
+*/
